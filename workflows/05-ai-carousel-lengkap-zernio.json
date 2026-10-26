@@ -1,0 +1,1112 @@
+{
+  "name": "AI Carousel + Generate Gambar + Post Instagram",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## 🔄 Alur Lengkap\n\n1. User kirim pesan ke bot\n2. AI buat konten carousel\n3. Ringkasan + detail slide dikirim\n4. Bot tanya: \"Generate gambar?\"\n5. User klik ✅ Ya → Gambar di-generate per slide via Gemini Imagen\n6. Setiap gambar dikirim ke Telegram dengan caption\n7. User klik ❌ Tidak → Selesai tanpa gambar",
+        "color": 2
+      },
+      "id": "3daf50c7-55c3-42fc-8a40-2d20789b672b",
+      "name": "Sticky Note e18109df",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        112,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## 🛑 Human-in-the-Loop\n\nNode \"Minta Persetujuan\" akan:\n- Kirim tombol ✅ Ya / ❌ Tidak langsung di Telegram\n- Tunggu maksimal 30 menit\n- Lanjut generate gambar jika disetujui\n- Kirim pesan selesai jika ditolak",
+        "color": 3
+      },
+      "id": "1d663879-da44-4fbd-9a8b-e72ceb460ac8",
+      "name": "Sticky Note e84bd45b",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        112,
+        560
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## 🎨 Generate Gambar Gemini Imagen\n\n- Setiap slide di-generate satu per satu\n- Format 1:1 square untuk sosmed\n- Dikirim ke Telegram dengan caption headline + body text\n\n⚠️ Pastikan Google Gemini API credential memiliki akses ke Imagen API (berbayar)",
+        "color": 4
+      },
+      "id": "8199d6bb-81ad-4fec-8b80-ab11e01c9b11",
+      "name": "Sticky Note 18f9685f",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        112,
+        816
+      ]
+    },
+    {
+      "parameters": {
+        "updates": [
+          "message"
+        ],
+        "additionalFields": {}
+      },
+      "id": "06d9b01c-50f0-4af2-95e3-fcf9fadc9a71",
+      "name": "Telegram Bot Trigger",
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.5,
+      "position": [
+        160,
+        80
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.message.chat.id }}",
+        "text": "=⏳ Halo {{ $json.message.from.first_name }}! Sedang membuat carousel kamu...\n\nMohon tunggu sebentar ya 🙏",
+        "additionalFields": {
+          "appendAttribution": false,
+          "parse_mode": "HTML"
+        }
+      },
+      "id": "6faa626b-7918-4da8-b027-0d66216b15f8",
+      "name": "Kirim Pesan Proses",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        416,
+        -32
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "chat_id",
+              "name": "chat_id",
+              "value": "={{ $(\"Telegram Bot Trigger\").item.json.message.chat.id }}",
+              "type": "string"
+            },
+            {
+              "id": "user_name",
+              "name": "user_name",
+              "value": "={{ $(\"Telegram Bot Trigger\").item.json.message.from.first_name }}",
+              "type": "string"
+            },
+            {
+              "id": "raw_text",
+              "name": "raw_text",
+              "value": "={{ $(\"Telegram Bot Trigger\").item.json.message.text ?? \"\" }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "3b21c557-76e2-4b07-8af5-f874eccdb61a",
+      "name": "Parse Input Telegram",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        576,
+        224
+      ]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Buat konten carousel berdasarkan permintaan berikut:\n{{ $json.raw_text }}\n\nJika format tidak spesifik, tentukan sendiri: topik dari teks, 7 slide, tone inspiratif, bahasa Indonesia.\n\nPanduan WAJIB:\n1. HOOK (slide 1) harus sangat menarik\n2. Setiap slide = SATU poin, fokus dan tajam\n3. Headline: maksimal 5-7 kata\n4. Body text: maksimal 2-3 kalimat\n5. Sertakan saran visual spesifik untuk setiap slide\n6. Gunakan emoji yang relevan\n7. Closing slide HARUS ada CTA yang kuat\n8. Caption: engaging dengan 10-15 hashtag relevan",
+        "hasOutputParser": true,
+        "options": {}
+      },
+      "id": "5246f89e-c063-49bb-af07-996f14de17f4",
+      "name": "AI Agent Pembuat Carousel",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        720,
+        112
+      ]
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-3.1-flash-lite",
+        "options": {}
+      },
+      "id": "904f59b7-f679-4813-93f0-1b2dbe453606",
+      "name": "Google Gemini Chat Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1.1,
+      "position": [
+        912,
+        512
+      ]
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": "{ \"title\": \"7 Tips Investasi Saham untuk Pemula\", \"hook\": \"90% orang rugi di saham karena tidak tahu hal ini!\", \"slides\": [{ \"slide_number\": 1, \"headline\": \"Mulai dari Dana Darurat Dulu\", \"body_text\": \"Sebelum investasi pastikan kamu punya dana darurat 3-6 bulan. Ini fondasi keuangan yang wajib.\", \"visual_suggestion\": \"Ilustrasi celengan babi dengan uang koin\", \"emoji\": \"🐷\" }, { \"slide_number\": 2, \"headline\": \"Belajar Sebelum Beli Saham\", \"body_text\": \"Jangan FOMO! Pahami dulu fundamental perusahaan sebelum membeli sahamnya.\", \"visual_suggestion\": \"Seseorang membaca buku di depan grafik saham\", \"emoji\": \"📚\" }], \"closing_slide\": { \"headline\": \"Mulai Investasimu Sekarang!\", \"cta\": \"Follow dan simpan post ini untuk referensimu!\", \"hashtags\": \"#investasi #saham #finansial #keuangan #pemula\" }, \"caption\": \"Mau mulai investasi tapi bingung dari mana? Berikut 7 tips investasi saham yang wajib kamu tahu! Simpan post ini dan bagikan ke teman yang butuh! #investasi #saham #finansial #keuangan #tips #pemula\" }"
+      },
+      "id": "032d758e-dc34-442c-8905-27a1018eb29a",
+      "name": "Parser Carousel JSON",
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        448,
+        656
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "chat_id",
+              "name": "chat_id",
+              "value": "={{ $(\"Parse Input Telegram\").item.json.chat_id }}",
+              "type": "string"
+            },
+            {
+              "id": "telegram_message",
+              "name": "telegram_message",
+              "value": "=✅ <b>Carousel Siap!</b>\n\n🎯 <b>{{ $json.output.title }}</b>\n\n━━━━━━━━━━━━━━━━━━━\n🪝 <b>HOOK</b>\n{{ $json.output.hook }}\n\n━━━━━━━━━━━━━━━━━━━\n📋 <b>CAPTION</b>\n{{ $json.output.caption }}\n\n━━━━━━━━━━━━━━━━━━━\n🏁 <b>CLOSING</b>\n<b>{{ $json.output.closing_slide.headline }}</b>\n{{ $json.output.closing_slide.cta }}\n{{ $json.output.closing_slide.hashtags }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "a36bdebe-c0cf-4d96-99ba-beaaf35ed428",
+      "name": "Format Pesan Telegram",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1120,
+        208
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chat_id }}",
+        "text": "={{ $json.telegram_message }}",
+        "additionalFields": {
+          "appendAttribution": false,
+          "disable_web_page_preview": true,
+          "parse_mode": "HTML"
+        }
+      },
+      "id": "7151d17b-fbb2-44d0-85f5-8efb60b64c22",
+      "name": "Kirim Hasil Carousel",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1344,
+        208
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "chat_id",
+              "name": "chat_id",
+              "value": "={{ $(\"Parse Input Telegram\").item.json.chat_id }}",
+              "type": "string"
+            },
+            {
+              "id": "slides_message",
+              "name": "slides_message",
+              "value": "=📑 <b>DETAIL SLIDE PER SLIDE</b>\n\n{{ $(\"AI Agent Pembuat Carousel\").item.json.output.slides.map(s => \"🔹 Slide \" + s.slide_number + \" \" + s.emoji + \"\\n<b>\" + s.headline + \"</b>\\n\" + s.body_text + \"\\n🎨 \" + s.visual_suggestion).join(\"\\n\\n\") }}\n\n━━━━━━━━━━━━━━━━━━━\n<i>Dibuat oleh AI Carousel Bot 🤖</i>",
+              "type": "string"
+            },
+            {
+              "id": "slides_data",
+              "name": "slides_data",
+              "value": "={{ $(\"AI Agent Pembuat Carousel\").item.json.output.slides }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "44976078-ed33-44cf-a685-62d38067b1c4",
+      "name": "Format Detail Slides",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1120,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chat_id }}",
+        "text": "={{ $json.slides_message }}",
+        "additionalFields": {
+          "appendAttribution": false,
+          "disable_web_page_preview": true,
+          "parse_mode": "HTML"
+        }
+      },
+      "id": "305953a3-d11b-4132-9851-c14e7818224b",
+      "name": "Kirim Detail Slides",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1344,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "sendAndWait",
+        "chatId": "={{ $(\"Parse Input Telegram\").item.json.chat_id }}",
+        "message": "=🎨 Carousel sudah siap!\n\nApakah kamu ingin saya <b>generate gambar</b> untuk setiap slide menggunakan Gemini Imagen?\n\n⚠️ Proses ini akan memakan waktu beberapa menit untuk {{ $(\"AI Agent Pembuat Carousel\").item.json.output.slides.length }} slide.",
+        "approvalOptions": {
+          "values": {
+            "approvalType": "double",
+            "approveLabel": "✅ Ya, Generate Gambar!",
+            "disapproveLabel": "❌ Tidak, Terima Kasih"
+          }
+        },
+        "chatApproval": true,
+        "approverIds": "={{ $(\"Parse Input Telegram\").item.json.chat_id }}",
+        "options": {
+          "limitWaitTime": {
+            "values": {
+              "resumeAmount": 30,
+              "resumeUnit": "minutes"
+            }
+          },
+          "appendAttribution": false
+        }
+      },
+      "id": "b11989dd-d84f-43f2-a213-03ba6a4cc0ed",
+      "name": "Minta Persetujuan Generate Gambar",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1568,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "approved",
+              "leftValue": "={{ $json.data.approved }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "98e9365f-284d-41fc-9142-187fa21251bb",
+      "name": "Disetujui?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1792,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $(\"Parse Input Telegram\").item.json.chat_id }}",
+        "text": "=🎨 Oke! Mulai generate gambar untuk <b>{{ $(\"AI Agent Pembuat Carousel\").item.json.output.slides.length }} slide</b>...\n\nMohon tunggu, ini mungkin butuh beberapa menit ⏳",
+        "additionalFields": {
+          "appendAttribution": false,
+          "parse_mode": "HTML"
+        }
+      },
+      "id": "d4e19e2f-6659-4f33-b396-bde0f2ac692a",
+      "name": "Kirim Notif Mulai Generate",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        2000,
+        160
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "chat_id",
+              "name": "chat_id",
+              "value": "={{ $(\"Parse Input Telegram\").item.json.chat_id }}",
+              "type": "string"
+            },
+            {
+              "id": "slides",
+              "name": "slides",
+              "value": "={{ $(\"AI Agent Pembuat Carousel\").item.json.output.slides }}",
+              "type": "array"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "d6307301-f1d9-4b57-86c2-d4af34bbec45",
+      "name": "Siapkan Data Slides",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2224,
+        160
+      ]
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "slides",
+        "options": {}
+      },
+      "id": "6cd32fd3-a636-4aa4-a843-a0ad23c2d754",
+      "name": "Split Tiap Slide",
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        2448,
+        160
+      ]
+    },
+    {
+      "parameters": {
+        "authentication": "none",
+        "method": "GET",
+        "options": {
+          "batching": {
+            "batch": {
+              "batchInterval": 16000,
+              "batchSize": 1
+            }
+          },
+          "response": {
+            "response": {
+              "outputPropertyName": "data",
+              "responseFormat": "file"
+            }
+          },
+          "timeout": 120000
+        },
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "model",
+              "value": "flux"
+            },
+            {
+              "name": "width",
+              "value": "1024"
+            },
+            {
+              "name": "height",
+              "value": "1024"
+            },
+            {
+              "name": "nologo",
+              "value": "true"
+            }
+          ]
+        },
+        "sendBody": false,
+        "sendHeaders": false,
+        "sendQuery": true,
+        "url": "={{ 'https://image.pollinations.ai/prompt/' + encodeURIComponent('Instagram carousel slide, square 1:1, flat vector illustration, deep blue and white palette with orange accents, clean modern infographic design, high contrast, generous margins. Bold sans-serif title text at the top reading exactly: \"' + $json.headline + '\". Illustration: ' + $json.visual_suggestion) }}"
+      },
+      "id": "18fc288b-c8b9-492b-95fc-1388f5a56d42",
+      "name": "Generate Gambar Pollinations",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        2672,
+        160
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
+    },
+    {
+      "parameters": {
+        "operation": "sendPhoto",
+        "chatId": "={{ $(\"Parse Input Telegram\").item.json.chat_id }}",
+        "binaryData": true,
+        "additionalFields": {
+          "caption": "={{ $(\"Split Tiap Slide\").item.json.emoji }} <b>Slide {{ $(\"Split Tiap Slide\").item.json.slide_number }}: {{ $(\"Split Tiap Slide\").item.json.headline }}</b>\n\n{{ $(\"Split Tiap Slide\").item.json.body_text }}",
+          "parse_mode": "HTML"
+        }
+      },
+      "id": "a89a0da5-529b-4bcc-b3a3-385b50387f2e",
+      "name": "Kirim Foto ke Telegram",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        3104,
+        160
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $(\"Parse Input Telegram\").item.json.chat_id }}",
+        "text": "🎉 Semua gambar slide sudah terkirim!\n\nGambar siap digunakan untuk konten kamu. Kirim pesan baru untuk membuat carousel lainnya! 🚀",
+        "additionalFields": {
+          "appendAttribution": false,
+          "parse_mode": "HTML"
+        }
+      },
+      "id": "599e8271-b243-458f-bef4-d00deb0ea849",
+      "name": "Kirim Pesan Selesai",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        5120,
+        80
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $(\"Parse Input Telegram\").item.json.chat_id }}",
+        "text": "👌 Oke! Konten carousel sudah tersimpan di atas.\n\nKirim pesan baru kapanpun kamu ingin membuat carousel lagi! 🚀",
+        "additionalFields": {
+          "appendAttribution": false,
+          "parse_mode": "HTML"
+        }
+      },
+      "id": "22ce5fe7-83b5-455e-a94a-05222c415526",
+      "name": "Kirim Pesan Ditolak",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        2000,
+        480
+      ]
+    },
+    {
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "destinationFieldName": "all_images",
+        "options": {}
+      },
+      "id": "collect-images-node",
+      "name": "Kumpulkan Semua URL Gambar",
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        3552,
+        160
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "sendAndWait",
+        "chatId": "={{ $('Parse Input Telegram').item.json.chat_id }}",
+        "message": "=📸 Semua gambar sudah siap!\n\nApakah kamu ingin <b>posting carousel ini ke Instagram</b> sekarang via Zernio?\n\n📋 Judul: <b>{{ $('AI Agent Pembuat Carousel').item.json.output.title }}</b>",
+        "approvalOptions": {
+          "values": {
+            "approvalType": "double",
+            "approveLabel": "📲 Ya, Post ke Instagram!",
+            "disapproveLabel": "❌ Tidak Perlu"
+          }
+        },
+        "chatApproval": true,
+        "approverIds": "={{ $('Parse Input Telegram').item.json.chat_id }}",
+        "options": {
+          "limitWaitTime": {
+            "values": {
+              "resumeAmount": 30,
+              "resumeUnit": "minutes"
+            }
+          },
+          "appendAttribution": false
+        }
+      },
+      "id": "ask-post-instagram-node",
+      "name": "Tanya Post ke Instagram?",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        3776,
+        160
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "check-approved",
+              "leftValue": "={{ $json.data.approved }}",
+              "operator": {
+                "operation": "equals",
+                "type": "boolean"
+              },
+              "rightValue": true
+            }
+          ],
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          }
+        },
+        "options": {}
+      },
+      "id": "check-post-instagram-node",
+      "name": "Mau Post Instagram?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        4000,
+        160
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Parse Input Telegram').item.json.chat_id }}",
+        "text": "=📲 Oke! Sedang memposting carousel ke Instagram...\n\nMohon tunggu sebentar ⏳",
+        "additionalFields": {
+          "appendAttribution": false,
+          "parse_mode": "HTML"
+        }
+      },
+      "id": "notif-mulai-posting-node",
+      "name": "Notif Mulai Posting Instagram",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        4224,
+        80
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const accounts = $('Ambil Akun Instagram Zernio').first().json.accounts || [];\nif (!accounts.length) {\n  throw new Error('Tidak ada akun Instagram yang terhubung di Zernio. Hubungkan dulu akun Instagram di dashboard Zernio.');\n}\nconst accountId = accounts[0]._id;\nconst images = $('Kumpulkan Semua URL Gambar').first().json.all_images || [];\nconst mediaItems = images\n  .map(i => ({ type: 'image', url: i.data?.url || i.url }))\n  .filter(m => m.url);\nconst caption = $('AI Agent Pembuat Carousel').first().json.output.caption || '';\nconst chatId = $('Parse Input Telegram').first().json.chat_id;\nreturn [{ json: { chat_id: chatId, caption, mediaItems, accountId } }];"
+      },
+      "id": "siapkan-payload-zernio-node",
+      "name": "Siapkan Payload Zernio",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4448,
+        80
+      ]
+    },
+    {
+      "parameters": {
+        "authentication": "none",
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer REPLACE_WITH_ZERNIO_API_KEY"
+            }
+          ]
+        },
+        "jsonBody": "={\n  \"content\": {{ JSON.stringify($json.caption) }},\n  \"mediaItems\": {{ JSON.stringify($json.mediaItems) }},\n  \"platforms\": [{\"platform\": \"instagram\", \"accountId\": {{ JSON.stringify($json.accountId) }}}],\n  \"publishNow\": true\n}",
+        "method": "POST",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        },
+        "sendBody": true,
+        "sendHeaders": true,
+        "specifyBody": "json",
+        "url": "https://zernio.com/api/v1/posts"
+      },
+      "id": "post-zernio-node",
+      "name": "POST ke Instagram via Zernio",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        4672,
+        80
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Parse Input Telegram').item.json.chat_id }}",
+        "text": "=✅ <b>Carousel berhasil diposting ke Instagram!</b>\n\n🔗 Cek postinganmu di Instagram!\n\nKirim pesan baru untuk membuat carousel lagi 🚀",
+        "additionalFields": {
+          "appendAttribution": false,
+          "parse_mode": "HTML"
+        }
+      },
+      "id": "kirim-sukses-instagram-node",
+      "name": "Kirim Notif Sukses Instagram",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        4896,
+        80
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Parse Input Telegram').item.json.chat_id }}",
+        "text": "👌 Oke! Gambar sudah tersimpan di chat ini.\n\nKirim pesan baru untuk membuat carousel lagi! 🚀",
+        "additionalFields": {
+          "appendAttribution": false,
+          "parse_mode": "HTML"
+        }
+      },
+      "id": "kirim-skip-instagram-node",
+      "name": "Kirim Pesan Skip Instagram",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        4224,
+        288
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## 📲 Posting Instagram via Zernio\n\n**Setup yang diperlukan:**\n1. Daftar di zernio.com → dapatkan API Key\n2. Connect akun Instagram di dashboard Zernio\n3. Copy Account ID dari dashboard\n4. Di node **\"POST ke Instagram via Zernio\"**:\n   - Tambah credential: HTTP Header Auth\n   - Header Name: `Authorization`\n   - Header Value: `Bearer YOUR_API_KEY`\n   - Ganti `YOUR_ZERNIO_ACCOUNT_ID` dengan Account ID kamu\n\n⚠️ Zernio butuh URL gambar publik.",
+        "color": 5
+      },
+      "id": "sticky-zernio-note",
+      "name": "Sticky Note Zernio",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        3552,
+        400
+      ]
+    },
+    {
+      "id": "6900d0c5-bec0-4c43-9a08-d63d8328e4d9",
+      "name": "Upload ke ImgBB",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        3104,
+        380
+      ],
+      "parameters": {
+        "bodyParameters": {
+          "parameters": [
+            {
+              "inputDataFieldName": "data",
+              "name": "image",
+              "parameterType": "formBinaryData"
+            }
+          ]
+        },
+        "contentType": "multipart-form-data",
+        "method": "POST",
+        "options": {},
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "key",
+              "value": "REPLACE_WITH_IMGBB_API_KEY"
+            },
+            {
+              "name": "expiration",
+              "value": "86400"
+            }
+          ]
+        },
+        "sendBody": true,
+        "sendQuery": true,
+        "url": "https://api.imgbb.com/1/upload"
+      },
+      "notes": "Ganti YOUR_IMGBB_API_KEY dengan API key dari api.imgbb.com. Gambar dihapus otomatis setelah 24 jam. Hasilnya URL publik untuk Zernio."
+    },
+    {
+      "id": "773c4aa9-962e-429d-9800-03444ac24a8b",
+      "name": "Ambil Akun Instagram Zernio",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        4336,
+        -120
+      ],
+      "parameters": {
+        "authentication": "none",
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer REPLACE_WITH_ZERNIO_API_KEY"
+            }
+          ]
+        },
+        "method": "GET",
+        "options": {},
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "platform",
+              "value": "instagram"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "sendQuery": true,
+        "url": "https://zernio.com/api/v1/accounts"
+      },
+      "notes": "Mengambil Account ID Instagram yang terhubung di Zernio secara otomatis (akun pertama)."
+    },
+    {
+      "id": "4a195cae-ae39-4e4d-abbe-98d7722d72bd",
+      "name": "Siapkan Data Sheet",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3776,
+        -160
+      ],
+      "parameters": {
+        "jsCode": "const out = $('AI Agent Pembuat Carousel').first().json.output || {};\nconst slides = out.slides || [];\nconst images = $input.first().json.all_images || [];\nconst urls = images.map(i => i.data?.url || i.url).filter(Boolean);\nconst slideText = slides.map(s => s.slide_number + '. ' + s.headline + ' - ' + s.body_text).join(' | ');\nconst closing = out.closing_slide || {};\nreturn [{ json: {\n  topik: $('Parse Input Telegram').first().json.raw_text || '',\n  judul: out.title || '',\n  caption: out.caption || '',\n  hashtag: closing.hashtags || '',\n  slides: slideText + (closing.cta ? ' | CTA: ' + closing.cta : ''),\n  gambar_urls: urls.join(', '),\n  status: 'draft'\n} }];"
+      },
+      "notes": "Merangkum hasil carousel jadi satu baris untuk Google Sheet."
+    },
+    {
+      "id": "477a32fb-c342-4e9f-9b74-b45131f23660",
+      "name": "Simpan Carousel ke Sheet",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        4000,
+        -160
+      ],
+      "parameters": {
+        "jsonBody": "={{ JSON.stringify($json) }}",
+        "method": "POST",
+        "options": {},
+        "sendBody": true,
+        "specifyBody": "json",
+        "url": "https://YOUR-N8N-HOST/webhook/simpan-carousel"
+      },
+      "notes": "Mengirim ke workflow 'Simpan Carousel ke Google Sheet'. Workflow itu harus aktif (published).",
+      "onError": "continueRegularOutput"
+    }
+  ],
+  "connections": {
+    "Telegram Bot Trigger": {
+      "main": [
+        [
+          {
+            "node": "Kirim Pesan Proses",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Kirim Pesan Proses": {
+      "main": [
+        [
+          {
+            "node": "Parse Input Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Input Telegram": {
+      "main": [
+        [
+          {
+            "node": "AI Agent Pembuat Carousel",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent Pembuat Carousel": {
+      "main": [
+        [
+          {
+            "node": "Format Pesan Telegram",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Format Detail Slides",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent Pembuat Carousel",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parser Carousel JSON": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "AI Agent Pembuat Carousel",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Pesan Telegram": {
+      "main": [
+        [
+          {
+            "node": "Kirim Hasil Carousel",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Detail Slides": {
+      "main": [
+        [
+          {
+            "node": "Kirim Detail Slides",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Kirim Detail Slides": {
+      "main": [
+        [
+          {
+            "node": "Minta Persetujuan Generate Gambar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Minta Persetujuan Generate Gambar": {
+      "main": [
+        [
+          {
+            "node": "Disetujui?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Disetujui?": {
+      "main": [
+        [
+          {
+            "node": "Kirim Notif Mulai Generate",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Siapkan Data Slides",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Kirim Pesan Ditolak",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Siapkan Data Slides": {
+      "main": [
+        [
+          {
+            "node": "Split Tiap Slide",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Tiap Slide": {
+      "main": [
+        [
+          {
+            "node": "Generate Gambar Pollinations",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tanya Post ke Instagram?": {
+      "main": [
+        [
+          {
+            "node": "Mau Post Instagram?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mau Post Instagram?": {
+      "main": [
+        [
+          {
+            "node": "Notif Mulai Posting Instagram",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Kirim Pesan Skip Instagram",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Siapkan Payload Zernio": {
+      "main": [
+        [
+          {
+            "node": "POST ke Instagram via Zernio",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "POST ke Instagram via Zernio": {
+      "main": [
+        [
+          {
+            "node": "Kirim Notif Sukses Instagram",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Kirim Notif Sukses Instagram": {
+      "main": [
+        [
+          {
+            "node": "Kirim Pesan Selesai",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upload ke ImgBB": {
+      "main": [
+        [
+          {
+            "node": "Kumpulkan Semua URL Gambar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Kumpulkan Semua URL Gambar": {
+      "main": [
+        [
+          {
+            "node": "Tanya Post ke Instagram?",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Siapkan Data Sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Notif Mulai Posting Instagram": {
+      "main": [
+        [
+          {
+            "node": "Ambil Akun Instagram Zernio",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ambil Akun Instagram Zernio": {
+      "main": [
+        [
+          {
+            "node": "Siapkan Payload Zernio",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Gambar Pollinations": {
+      "main": [
+        [
+          {
+            "node": "Kirim Foto ke Telegram",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Upload ke ImgBB",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Siapkan Data Sheet": {
+      "main": [
+        [
+          {
+            "node": "Simpan Carousel ke Sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "active": false
+}

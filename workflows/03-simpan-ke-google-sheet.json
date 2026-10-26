@@ -1,0 +1,222 @@
+{
+  "name": "Simpan Carousel ke Google Sheet",
+  "nodes": [
+    {
+      "id": "1c63fe45-4a34-412a-9e44-0b2054cda0f3",
+      "name": "Terima Data Carousel",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        0
+      ],
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "simpan-carousel",
+        "authentication": "none",
+        "responseMode": "onReceived"
+      }
+    },
+    {
+      "id": "a737b83b-9feb-49e8-ba6d-61e1740c8dc5",
+      "name": "Rapikan Data Carousel",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        224,
+        0
+      ],
+      "parameters": {
+        "mode": "manual",
+        "assignments": {
+          "assignments": [
+            {
+              "id": "f-tanggal",
+              "name": "tanggal",
+              "value": "={{ $now.setZone(\"Asia/Jakarta\").toFormat(\"yyyy-MM-dd HH:mm\") }}",
+              "type": "string"
+            },
+            {
+              "id": "f-topik",
+              "name": "topik",
+              "value": "={{ $json.body?.topik ?? $json.topik ?? \"\" }}",
+              "type": "string"
+            },
+            {
+              "id": "f-judul",
+              "name": "judul",
+              "value": "={{ $json.body?.judul ?? $json.judul ?? \"\" }}",
+              "type": "string"
+            },
+            {
+              "id": "f-caption",
+              "name": "caption",
+              "value": "={{ $json.body?.caption ?? $json.caption ?? \"\" }}",
+              "type": "string"
+            },
+            {
+              "id": "f-hashtag",
+              "name": "hashtag",
+              "value": "={{ $json.body?.hashtag ?? $json.hashtag ?? \"\" }}",
+              "type": "string"
+            },
+            {
+              "id": "f-slides",
+              "name": "slides",
+              "value": "={{ $json.body?.slides ?? $json.slides ?? \"\" }}",
+              "type": "string"
+            },
+            {
+              "id": "f-gambar",
+              "name": "gambar_urls",
+              "value": "={{ $json.body?.gambar_urls ?? $json.gambar_urls ?? \"\" }}",
+              "type": "string"
+            },
+            {
+              "id": "f-status",
+              "name": "status",
+              "value": "={{ $json.body?.status ?? $json.status ?? \"draft\" }}",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": false
+      }
+    },
+    {
+      "id": "f55b7290-97f7-4166-ac74-f07f0a7ea812",
+      "name": "Simpan ke Google Sheet",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        448,
+        0
+      ],
+      "parameters": {
+        "resource": "sheet",
+        "operation": "append",
+        "authentication": "oAuth2",
+        "documentId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "REPLACE_WITH_ARCHIVE_SHEET_ID",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/REPLACE_WITH_ARCHIVE_SHEET_ID/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Sheet1"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "schema": [
+            {
+              "id": "tanggal",
+              "displayName": "tanggal",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "topik",
+              "displayName": "topik",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "judul",
+              "displayName": "judul",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "caption",
+              "displayName": "caption",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "hashtag",
+              "displayName": "hashtag",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "slides",
+              "displayName": "slides",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "gambar_urls",
+              "displayName": "gambar_urls",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "status",
+              "displayName": "status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            }
+          ]
+        },
+        "options": {
+          "handlingExtraData": "ignoreIt"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Terima Data Carousel": {
+      "main": [
+        [
+          {
+            "node": "Rapikan Data Carousel",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Rapikan Data Carousel": {
+      "main": [
+        [
+          {
+            "node": "Simpan ke Google Sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "active": false
+}

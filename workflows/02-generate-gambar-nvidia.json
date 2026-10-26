@@ -1,0 +1,411 @@
+{
+  "name": "Generate Gambar Carousel Pending",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "2e1fdc48-051e-404d-93ba-ffd526432ad0",
+      "name": "Mulai Manual",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "REPLACE_WITH_CAROUSEL_SHEET_ID"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Carousel"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "status",
+              "lookupValue": "pending"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "1f480d02-3f1b-4478-8ce1-00a6f51367b2",
+      "name": "Ambil Baris Pending",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        256,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "cek-image-kosong",
+              "leftValue": "={{ $json.image_urls ?? \"\" }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "120b9312-f88a-40a2-8081-2787c193afd6",
+      "name": "Hanya Yang Belum Ada Gambar",
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.3,
+      "position": [
+        512,
+        304
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "fd24a20d-08c6-485c-9140-e2a0653fe332",
+      "name": "Batasi 1 Baris",
+      "type": "n8n-nodes-base.limit",
+      "typeVersion": 1,
+      "position": [
+        752,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const row = $input.first().json;\nconst style = 'Instagram carousel slide, square 1:1, flat vector illustration, deep blue and white palette with orange accents, clean modern infographic design, high contrast, generous margins.';\nconst out = [];\nfunction add(no, label, title, body) {\n  const t = String(title || '').trim();\n  const b = String(body || '').trim();\n  if (!t && !b) return;\n  const prompt = style + ' Bold sans-serif title text at the top reading exactly: \"' + t + '\". Illustration that visually represents: ' + (b || t) + '. Overall carousel topic: ' + String(row.topic || '') + '.';\n  out.push({ json: { row_id: row.id, slide_no: no, label: label, title: t, body: b, prompt: prompt } });\n}\nadd(0, 'cover', row.cover_title, row.cover_subtitle);\nfor (let i = 1; i <= 10; i++) {\n  const n = String(i).padStart(2, '0');\n  add(i, 'slide_' + n, row['slide_' + n + '_title'], row['slide_' + n + '_body']);\n}\nreturn out;"
+      },
+      "id": "b9f30630-0e84-493d-bc6f-b454076a1788",
+      "name": "Susun Prompt Per Slide",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1008,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.imgbb.com/1/upload",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpCustomAuth",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {}
+          ]
+        },
+        "sendBody": true,
+        "contentType": "multipart-form-data",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "parameterType": "formBinaryData",
+              "name": "image",
+              "inputDataFieldName": "data"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "1b85559d-0763-4874-8dec-99cf2637ddd9",
+      "name": "Unggah ke ImgBB",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        2656,
+        304
+      ],
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 3000
+    },
+    {
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "destinationFieldName": "uploads",
+        "options": {}
+      },
+      "id": "d5163221-83c9-4132-bd94-41ac2d1c33d6",
+      "name": "Kumpulkan Semua Hasil Unggahan",
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        2864,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const rowId = $('Batasi 1 Baris').first().json.id;\nconst uploads = $input.first().json.uploads || [];\nconst urls = uploads.map(u => (u.data && u.data.url) || u.url).filter(Boolean);\nif (!urls.length) {\n  throw new Error('Tidak ada URL gambar yang berhasil diunggah untuk baris ' + rowId);\n}\nreturn [{ json: { id: rowId, image_urls: urls.join(', '), jumlah_gambar: urls.length } }];"
+      },
+      "id": "ec7ab887-f65f-4e1f-bfb9-abfda041949b",
+      "name": "Susun Daftar URL",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3056,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "REPLACE_WITH_CAROUSEL_SHEET_ID"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Carousel"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "id": "={{ $json.id }}",
+            "image_urls": "={{ $json.image_urls }}"
+          },
+          "matchingColumns": [
+            "id"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "image_urls",
+              "displayName": "image_urls",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "b12fd8d1-d3c1-4f63-92f9-66b7d26262b3",
+      "name": "Isi image_urls di Sheet",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        3264,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Generate Gambar Carousel Pending\n\nManual: klik Execute Workflow.\nSetiap run memproses 1 baris status pending yang kolom image_urls-nya masih kosong (tab Carousel, sheet Knowledge Base).\nAlur: slide -> NVIDIA FLUX.1-schnell -> ImgBB -> isi kolom image_urls.\n\nCredential: Bearer Auth (API key NVIDIA) + ImgBB (Custom Auth, query key).\nNaikkan batas di node \"Batasi 1 Baris\" setelah uji coba berhasil.",
+        "color": 4
+      },
+      "id": "b5a25990-57c0-4a48-afdc-4c93fc1d9f2e",
+      "name": "Sticky Note 408a1836",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        112,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "authentication": "genericCredentialType",
+        "contentType": "json",
+        "genericAuthType": "httpBearerAuth",
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Accept",
+              "value": "application/json"
+            },
+            {
+              "name": "NVCF-POLL-SECONDS",
+              "value": "120"
+            }
+          ]
+        },
+        "jsonBody": "={{ JSON.stringify({ prompt: $json.prompt, width: 1024, height: 1024, seed: 0, steps: 4 }) }}",
+        "method": "POST",
+        "options": {
+          "batching": {
+            "batch": {
+              "batchInterval": 500,
+              "batchSize": 1
+            }
+          },
+          "timeout": 300000
+        },
+        "sendBody": true,
+        "sendHeaders": true,
+        "specifyBody": "json",
+        "url": "https://ai.api.nvidia.com/v1/genai/black-forest-labs/flux.1-schnell"
+      },
+      "id": "bfda5e05-9ebe-4fec-9d4f-bcdbffeef723",
+      "name": "Buat Gambar NVIDIA",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        1264,
+        304
+      ],
+      "retryOnFail": false,
+      "maxTries": 2,
+      "waitBetweenTries": 3000
+    },
+    {
+      "id": "68fa1955-9b4d-4773-afc4-8188c3f08f70",
+      "name": "Ubah Base64 ke Gambar",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1456,
+        304
+      ],
+      "parameters": {
+        "jsCode": "const out = [];\nfor (const item of $input.all()) {\n  const j = item.json;\n  const b64 = (j.artifacts && j.artifacts[0] && j.artifacts[0].base64) || j.image || (j.data && j.data[0] && j.data[0].b64_json);\n  if (!b64) {\n    throw new Error('Respons NVIDIA tidak berisi gambar: ' + JSON.stringify(j).slice(0, 300));\n  }\n  const bin = await this.helpers.prepareBinaryData(Buffer.from(b64, 'base64'), 'slide.jpg', 'image/jpeg');\n  out.push({ json: {}, binary: { data: bin } });\n}\nreturn out;"
+      }
+    }
+  ],
+  "connections": {
+    "Mulai Manual": {
+      "main": [
+        [
+          {
+            "node": "Ambil Baris Pending",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ambil Baris Pending": {
+      "main": [
+        [
+          {
+            "node": "Hanya Yang Belum Ada Gambar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Hanya Yang Belum Ada Gambar": {
+      "main": [
+        [
+          {
+            "node": "Batasi 1 Baris",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Batasi 1 Baris": {
+      "main": [
+        [
+          {
+            "node": "Susun Prompt Per Slide",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Unggah ke ImgBB": {
+      "main": [
+        [
+          {
+            "node": "Kumpulkan Semua Hasil Unggahan",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Kumpulkan Semua Hasil Unggahan": {
+      "main": [
+        [
+          {
+            "node": "Susun Daftar URL",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Susun Daftar URL": {
+      "main": [
+        [
+          {
+            "node": "Isi image_urls di Sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Susun Prompt Per Slide": {
+      "main": [
+        [
+          {
+            "node": "Buat Gambar NVIDIA",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buat Gambar NVIDIA": {
+      "main": [
+        [
+          {
+            "node": "Ubah Base64 ke Gambar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ubah Base64 ke Gambar": {
+      "main": [
+        [
+          {
+            "node": "Unggah ke ImgBB",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "active": false
+}

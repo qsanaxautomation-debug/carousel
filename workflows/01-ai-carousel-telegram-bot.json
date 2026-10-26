@@ -1,0 +1,473 @@
+{
+  "name": "AI Carousel Instagram - Telegram Bot",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## 🤖 Cara Pakai Bot Telegram\n\nKirim pesan ke bot dengan format:\n\n<b>Format lengkap:</b>\ntopik: [topik kamu] | slide: [jumlah] | tone: [gaya] | niche: [bidang]\n\n<b>Contoh:</b>\ntopik: Tips produktivitas WFH | slide: 7 | tone: inspiratif | niche: lifestyle\n\n<b>Format bebas juga bisa:</b>\nBuatkan carousel tentang tips diet sehat untuk 8 slide dengan tone santai\n\n<b>Bot akan mengirim 2 pesan:</b>\n1. Ringkasan (hook + caption + closing)\n2. Detail semua slide lengkap",
+        "color": 2
+      },
+      "id": "c1700a44-208b-4037-ac3a-5ef82fc41e9f",
+      "name": "Sticky Note 2991ca20",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        112,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## ⚙️ Setup Kredensial\n\n1. <b>Telegram Bot</b> - Buat bot via @BotFather, dapatkan token API\n2. <b>Google Gemini</b> - Masukkan API key Gemini kamu\n\nPastikan kedua kredensial sudah dikonfigurasi sebelum menjalankan workflow ini.",
+        "color": 3
+      },
+      "id": "7cee6844-f1b6-4493-aa38-e1456997422a",
+      "name": "Sticky Note c69f63f8",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        112,
+        560
+      ]
+    },
+    {
+      "parameters": {
+        "updates": [
+          "message"
+        ],
+        "additionalFields": {}
+      },
+      "id": "5e81a23f-6366-4b7a-9c72-72dc04f7abde",
+      "name": "Telegram Bot Trigger",
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.5,
+      "position": [
+        368,
+        448
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.message.chat.id }}",
+        "text": "=⏳ Halo {{ $json.message.from.first_name }}! Sedang membuat carousel Instagram kamu...\n\nMohon tunggu sebentar ya 🙏",
+        "additionalFields": {
+          "appendAttribution": false,
+          "parse_mode": "HTML"
+        }
+      },
+      "id": "b9632d12-4bea-4ff6-9cfd-fcfb8fa0526e",
+      "name": "Kirim Pesan Proses",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        544,
+        352
+      ],
+      "onError": "continueRegularOutput",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "chat_id",
+              "name": "chat_id",
+              "value": "={{ $(\"Telegram Bot Trigger\").item.json.message.chat.id }}",
+              "type": "string"
+            },
+            {
+              "id": "user_name",
+              "name": "user_name",
+              "value": "={{ $(\"Telegram Bot Trigger\").item.json.message.from.first_name }}",
+              "type": "string"
+            },
+            {
+              "id": "raw_text",
+              "name": "raw_text",
+              "value": "={{ $(\"Telegram Bot Trigger\").item.json.message.text ?? \"\" }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "e3f72e5d-1fed-446e-b69a-043d394de04e",
+      "name": "Parse Input Telegram",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        768,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Buat konten carousel Instagram berdasarkan permintaan berikut:\n{{ $json.raw_text }}\n\nJika format tidak spesifik, tentukan sendiri: topik dari teks, 7 slide, tone inspiratif, bahasa Indonesia.\n\nPanduan WAJIB:\n1. HOOK (slide 1) harus sangat menarik — pakai pertanyaan provokatif, statistik mengejutkan, atau pernyataan kontroversial\n2. Setiap slide = SATU poin, fokus dan tajam\n3. Headline: maksimal 5-7 kata, singkat dan powerful\n4. Body text: maksimal 2-3 kalimat, jelas dan actionable\n5. Sertakan saran visual spesifik untuk setiap slide\n6. Gunakan emoji yang relevan di setiap slide\n7. Closing slide HARUS ada CTA yang kuat (follow, simpan, share)\n8. Caption: engaging dengan 10-15 hashtag relevan\n9. Pastikan konten bernilai dan bermanfaat untuk pembaca",
+        "hasOutputParser": true,
+        "options": {}
+      },
+      "id": "5b961c81-cfcb-4791-8e15-e90250eaeb33",
+      "name": "AI Agent Pembuat Carousel",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        944,
+        304
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 4000
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": "{ \"title\": \"7 Tips Investasi Saham untuk Pemula\", \"hook\": \"90% orang rugi di saham karena tidak tahu hal ini!\", \"slides\": [{ \"slide_number\": 1, \"headline\": \"Mulai dari Dana Darurat Dulu\", \"body_text\": \"Sebelum investasi pastikan kamu punya dana darurat 3-6 bulan. Ini fondasi keuangan yang wajib.\", \"visual_suggestion\": \"Ilustrasi celengan babi dengan uang koin\", \"emoji\": \"🐷\" }, { \"slide_number\": 2, \"headline\": \"Belajar Sebelum Beli Saham\", \"body_text\": \"Jangan FOMO! Pahami dulu fundamental perusahaan sebelum membeli sahamnya.\", \"visual_suggestion\": \"Seseorang membaca buku di depan grafik saham\", \"emoji\": \"📚\" }], \"closing_slide\": { \"headline\": \"Mulai Investasimu Sekarang!\", \"cta\": \"Follow dan simpan post ini untuk referensimu!\" }, \"caption\": \"Mau mulai investasi tapi bingung dari mana? Berikut 7 tips investasi saham yang wajib kamu tahu! Simpan post ini dan bagikan ke teman yang butuh! #investasi #saham #finansial #keuangan #tips #pemula\" }"
+      },
+      "id": "aed3d200-8c8e-4cfe-b1fd-394048584f4e",
+      "name": "Parser Carousel JSON",
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        1008,
+        640
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "chat_id",
+              "name": "chat_id",
+              "type": "string",
+              "value": "={{ $(\"Parse Input Telegram\").item.json.chat_id }}"
+            },
+            {
+              "id": "telegram_message",
+              "name": "telegram_message",
+              "type": "string",
+              "value": "=✅ <b>Carousel Siap!</b>\n\n🎯 <b>{{ $json.output.title }}</b>\n\n━━━━━━━━━━━━━━━━━━━\n🪝 <b>HOOK</b>\n{{ $json.output.hook }}\n\n━━━━━━━━━━━━━━━━━━━\n📋 <b>CAPTION</b>\n{{ $json.output.caption }}\n\n━━━━━━━━━━━━━━━━━━━\n🏁 <b>CLOSING</b>\n<b>{{ $json.output.closing_slide.headline }}</b>\n{{ $json.output.closing_slide.cta }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "7bbf3c0d-9c47-48f0-a0c5-7850ea80a259",
+      "name": "Format Pesan Telegram",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1280,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chat_id }}",
+        "text": "={{ $json.telegram_message }}",
+        "additionalFields": {
+          "appendAttribution": false,
+          "disable_web_page_preview": true,
+          "parse_mode": "HTML"
+        }
+      },
+      "id": "8b0b2594-49d3-4a3b-b9c4-e744d3ada680",
+      "name": "Kirim Hasil Carousel",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1552,
+        304
+      ],
+      "onError": "continueRegularOutput",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "chat_id",
+              "name": "chat_id",
+              "type": "string",
+              "value": "={{ $(\"Parse Input Telegram\").item.json.chat_id }}"
+            },
+            {
+              "id": "slides_message",
+              "name": "slides_message",
+              "type": "string",
+              "value": "=📑 <b>DETAIL SLIDE PER SLIDE</b>\n\n{{ $(\"AI Agent Pembuat Carousel\").item.json.output.slides.map(s => '🔹 Slide ' + s.slide_number + ' ' + s.emoji + '\\n<b>' + s.headline + '</b>\\n' + s.body_text + '\\n🎨 ' + s.visual_suggestion).join('\\n\\n') }}\n\n━━━━━━━━━━━━━━━━━━━\n<i>Dibuat oleh AI Carousel Bot 🤖</i>"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "511c536f-94ff-4a09-98c8-418d11f79eef",
+      "name": "Format Detail Slides",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1280,
+        512
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chat_id }}",
+        "text": "={{ $json.slides_message }}",
+        "additionalFields": {
+          "appendAttribution": false,
+          "disable_web_page_preview": true,
+          "parse_mode": "HTML"
+        }
+      },
+      "id": "cc2ba325-6c3a-4d2e-afeb-4735c980eab9",
+      "name": "Kirim Detail Slides",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1552,
+        512
+      ],
+      "onError": "continueRegularOutput",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-3.1-flash-lite",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1.1,
+      "position": [
+        560,
+        576
+      ],
+      "id": "b50d3f1f-75f2-4fda-a1e7-b8d9fe7fa783",
+      "name": "Google Gemini Chat Model"
+    },
+    {
+      "id": "d027ef40-996a-45f3-a476-b05b5bd9031d",
+      "name": "Siapkan Baris Sheet",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1280,
+        720
+      ],
+      "parameters": {
+        "jsCode": "const out = $('AI Agent Pembuat Carousel').first().json.output || {};\nconst slides = out.slides || [];\nconst closing = out.closing_slide || {};\nconst input = $('Parse Input Telegram').first().json;\nconst now = $now.setZone('Asia/Jakarta');\n\n// Tags diambil dari hashtag di caption (fallback: closing_slide.hashtags jika ada)\nconst tagSource = String(out.caption || '') + ' ' + String(closing.hashtags || '');\nconst found = tagSource.match(/#[\\p{L}\\p{N}_]+/gu) || [];\nconst tags = [...new Set(found.map(t => t.replace(/^#/, '')))].slice(0, 4).join(', ');\n\nconst row = {\n  id: 'CRS-' + now.toFormat('yyyyMMdd-HHmmss'),\n  status: 'pending',\n  topic: input.raw_text || '',\n  cover_title: out.title || '',\n  cover_subtitle: out.hook || '',\n  tags,\n};\n\n// Template memuat maksimal 10 slide isi. Sisakan 1 slot untuk closing.\nconst content = slides.slice(0, 9).map(s => ({ title: s.headline || '', body: s.body_text || '', highlight: '' }));\nif (closing.headline || closing.cta) {\n  content.push({ title: closing.headline || '', body: closing.cta || '', highlight: '' });\n}\n\nfor (let i = 1; i <= 10; i++) {\n  const n = String(i).padStart(2, '0');\n  const s = content[i - 1] || {};\n  row['slide_' + n + '_title'] = s.title || '';\n  row['slide_' + n + '_body'] = s.body || '';\n  row['slide_' + n + '_highlight'] = s.highlight || '';\n}\n\nrow.caption = out.caption || '';\nrow.scheduled_at = '';\nrow.instagram_post_id = '';\nrow.published_at = '';\nrow.image_urls = '';\n\nreturn [{ json: row }];"
+      }
+    },
+    {
+      "id": "5867475f-1a4b-4d79-b13a-fca8a56d387d",
+      "name": "Simpan ke Sheet Carousel",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1552,
+        720
+      ],
+      "parameters": {
+        "authentication": "oAuth2",
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "schema": [],
+          "value": {}
+        },
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "REPLACE_WITH_CAROUSEL_SHEET_ID"
+        },
+        "operation": "append",
+        "options": {
+          "handlingExtraData": "ignoreIt"
+        },
+        "resource": "sheet",
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Carousel"
+        }
+      },
+      "notes": "Database carousel (Sheet ID REPLACE_WITH_IG_USER_ID), tab Sheet1. Baris baru berstatus pending untuk diposting terjadwal.",
+      "onError": "continueErrorOutput"
+    },
+    {
+      "id": "09de516d-c65a-40d7-b8f8-df45cec09f28",
+      "name": "Konfirmasi Tersimpan ke Sheet",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1824,
+        640
+      ],
+      "parameters": {
+        "additionalFields": {
+          "appendAttribution": false,
+          "parse_mode": "HTML"
+        },
+        "chatId": "={{ $('Parse Input Telegram').item.json.chat_id }}",
+        "text": "=💾 <b>Carousel tersimpan ke Google Sheet</b>\n\n🆔 ID: <code>{{ $('Siapkan Baris Sheet').item.json.id }}</code>\n📌 Status: <b>pending</b> (siap diposting ke Instagram)"
+      }
+    },
+    {
+      "id": "553346af-de26-4a02-82e3-78c5689f3a18",
+      "name": "Notif Gagal Simpan Sheet",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1824,
+        832
+      ],
+      "parameters": {
+        "additionalFields": {
+          "appendAttribution": false,
+          "parse_mode": "HTML"
+        },
+        "chatId": "={{ $('Parse Input Telegram').item.json.chat_id }}",
+        "text": "⚠️ Carousel berhasil dibuat, tapi <b>gagal disimpan ke Google Sheet</b>. Cek akses credential Google Sheets dan nama tab/kolom di sheet."
+      }
+    }
+  ],
+  "connections": {
+    "Telegram Bot Trigger": {
+      "main": [
+        [
+          {
+            "node": "Kirim Pesan Proses",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Kirim Pesan Proses": {
+      "main": [
+        [
+          {
+            "node": "Parse Input Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Input Telegram": {
+      "main": [
+        [
+          {
+            "node": "AI Agent Pembuat Carousel",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent Pembuat Carousel": {
+      "main": [
+        [
+          {
+            "node": "Format Pesan Telegram",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Format Detail Slides",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Siapkan Baris Sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parser Carousel JSON": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "AI Agent Pembuat Carousel",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Pesan Telegram": {
+      "main": [
+        [
+          {
+            "node": "Kirim Hasil Carousel",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Detail Slides": {
+      "main": [
+        [
+          {
+            "node": "Kirim Detail Slides",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent Pembuat Carousel",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Siapkan Baris Sheet": {
+      "main": [
+        [
+          {
+            "node": "Simpan ke Sheet Carousel",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simpan ke Sheet Carousel": {
+      "main": [
+        [
+          {
+            "node": "Konfirmasi Tersimpan ke Sheet",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Notif Gagal Simpan Sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "active": false
+}

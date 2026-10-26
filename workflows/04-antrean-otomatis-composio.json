@@ -1,0 +1,1878 @@
+{
+  "name": "Antrean Carousel Otomatis (Sheet ke Instagram via Composio)",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes"
+            }
+          ]
+        }
+      },
+      "id": "f4dd9a34-ed01-4129-ab52-78c46a878471",
+      "name": "Tiap 5 Menit",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.4,
+      "position": [
+        -128,
+        256
+      ]
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "REPLACE_WITH_CAROUSEL_SHEET_ID"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Carousel"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "status",
+              "lookupValue": "pending"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "d76950e5-a492-480b-9f34-6beb3ab4efdb",
+      "name": "Ambil Baris Pending",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        128,
+        240
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "p-chat",
+              "name": "chat_id",
+              "type": "string",
+              "value": "REPLACE_WITH_TELEGRAM_ADMIN_CHAT_ID"
+            },
+            {
+              "id": "p-conn",
+              "name": "connected_account_id",
+              "type": "string",
+              "value": "REPLACE_WITH_COMPOSIO_ACCOUNT_ID"
+            },
+            {
+              "id": "p-uid",
+              "name": "ig_user_id",
+              "type": "string",
+              "value": "REPLACE_WITH_IG_USER_ID"
+            },
+            {
+              "id": "p-user",
+              "name": "ig_username",
+              "type": "string",
+              "value": "REPLACE_WITH_IG_USERNAME"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "id": "a42c2daf-2c0d-4d35-9238-01305eb17d91",
+      "name": "Pengaturan",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        352,
+        240
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "REPLACE_WITH_CAROUSEL_SHEET_ID"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Carousel"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "id": "={{ $(\"Pengaturan\").first().json.id }}",
+            "status": "generating"
+          },
+          "matchingColumns": [
+            "id"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "status",
+              "displayName": "status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "d10141f4-cea6-41bb-87f3-f31526a1956c",
+      "name": "Tandai Generating",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        624,
+        16
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const row = $('Pengaturan').first().json;\nconst bersih = s => String(s || '').replace(/[\\u{1F000}-\\u{1FFFF}\\u{2600}-\\u{27BF}\\u{2B00}-\\u{2BFF}\\u{FE0F}\\u{200D}]/gu, '').replace(/\\s+/g, ' ').trim();\nconst daftar = [];\nfunction tambah(tipe, judul, isi) {\n  const j = bersih(judul);\n  const b = bersih(isi);\n  if (!j && !b) return;\n  daftar.push({ tipe: tipe, judul: j, isi: b });\n}\ntambah('cover', row.cover_title, row.cover_subtitle);\nfor (let i = 1; i <= 10; i++) {\n  const n = String(i).padStart(2, '0');\n  tambah('isi', row['slide_' + n + '_title'], row['slide_' + n + '_body']);\n}\nif (daftar.length < 2) {\n  throw new Error('Baris ' + row.id + ' punya kurang dari 2 slide');\n}\nconst total = daftar.length;\nreturn daftar.map((d, i) => ({ json: { row_id: row.id, no: i + 1, total: total, tipe: (i === total - 1 ? 'cover' : d.tipe), judul: d.judul, isi: d.isi } }));"
+      },
+      "id": "950600c9-9de6-4246-b045-2bb954cd72a7",
+      "name": "Susun Prompt Per Slide",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        880,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.imgbb.com/1/upload",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpCustomAuth",
+        "sendBody": true,
+        "contentType": "multipart-form-data",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "parameterType": "formBinaryData",
+              "name": "image",
+              "inputDataFieldName": "data"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "45e380a9-75e7-424a-9bbd-cc609f79d98a",
+      "name": "Unggah ke ImgBB",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        1552,
+        0
+      ],
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 3000
+    },
+    {
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "destinationFieldName": "uploads",
+        "options": {}
+      },
+      "id": "8d1a1663-5199-4911-9e64-ef37d5087c3a",
+      "name": "Kumpulkan Hasil Unggahan",
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        1760,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const rowId = $('Pengaturan').first().json.id;\nconst uploads = $input.first().json.uploads || [];\nconst urls = uploads.map(u => (u.data && u.data.url) || u.url).filter(Boolean);\nif (!urls.length) {\n  throw new Error('Tidak ada URL gambar yang berhasil diunggah untuk baris ' + rowId);\n}\nreturn [{ json: { id: rowId, image_urls: urls.join(', '), urls: urls, jumlah_gambar: urls.length } }];"
+      },
+      "id": "ea410670-5026-4f9b-9f90-9e49553c950c",
+      "name": "Susun Daftar URL",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1984,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "REPLACE_WITH_CAROUSEL_SHEET_ID"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Carousel"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "id": "={{ $json.id }}",
+            "image_urls": "={{ $json.image_urls }}",
+            "status": "image_ready"
+          },
+          "matchingColumns": [
+            "id"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "image_urls",
+              "displayName": "image_urls",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "status",
+              "displayName": "status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "f5bff174-4d04-483e-bd49-19ade8afa7e0",
+      "name": "Simpan Gambar dan Status image_ready",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        2208,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const urls = $('Susun Daftar URL').first().json.urls || [];\nreturn urls.map((u, i) => ({ json: { url: u, no: i + 1, total: urls.length } }));"
+      },
+      "id": "091d869f-a481-4640-9aad-8a2136fe3d27",
+      "name": "Siapkan Preview",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2432,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "sendPhoto",
+        "chatId": "={{ $(\"Pengaturan\").first().json.chat_id }}",
+        "file": "={{ $json.url }}",
+        "additionalFields": {
+          "caption": "=Slide {{ $json.no }} dari {{ $json.total }}"
+        }
+      },
+      "id": "08920795-07f6-4519-9d10-907d7a3137dc",
+      "name": "Kirim Preview Foto",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        2640,
+        0
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "destinationFieldName": "preview",
+        "options": {}
+      },
+      "id": "2128162b-6eea-447a-9065-7a34a4fe9c2a",
+      "name": "Kumpulkan Preview",
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        2864,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "sendAndWait",
+        "chatId": "={{ $(\"Pengaturan\").first().json.chat_id }}",
+        "message": "=📸 Carousel siap diposting\n\n📋 Judul: {{ $(\"Pengaturan\").first().json.cover_title }}\n🖼️ Jumlah gambar: {{ $(\"Susun Daftar URL\").first().json.jumlah_gambar }}\n\nPosting ke @AKUN_UTAMA sekarang?\n(Tekan tombol kedua untuk memilih akun lain atau membatalkan.)",
+        "approvalOptions": {
+          "values": {
+            "approvalType": "double",
+            "approveLabel": "📲 Ya, ke @AKUN_UTAMA",
+            "disapproveLabel": "↪️ Akun lain / Batal"
+          }
+        },
+        "chatApproval": true,
+        "approverIds": "={{ $(\"Pengaturan\").first().json.chat_id }}",
+        "options": {
+          "limitWaitTime": {
+            "values": {
+              "resumeAmount": 24
+            }
+          },
+          "appendAttribution": false
+        }
+      },
+      "id": "d39ab9b6-0ce5-4b0c-bc5c-e6c2a94aea9c",
+      "name": "Minta Persetujuan Posting",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        3088,
+        0
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 3000
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "approved",
+              "leftValue": "={{ $json.data.approved }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "73390011-bc81-4ffe-be61-1b54d45e28e7",
+      "name": "Disetujui?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        3312,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const cfg0 = $('Pengaturan').first().json;\nconst cfg = Object.assign({}, cfg0);\ntry {\n  const e = $('Akun Ebooks').first().json;\n  if (e && e.ig_user_id) {\n    cfg.connected_account_id = e.connected_account_id;\n    cfg.ig_user_id = e.ig_user_id;\n    cfg.ig_username = e.ig_username;\n  }\n} catch (err) {}\nconst urls = ($('Susun Daftar URL').first().json.urls || []).slice(0, 10);\nif (urls.length < 2) {\n  throw new Error('Carousel Instagram butuh minimal 2 gambar, yang tersedia ' + urls.length);\n}\nlet n = 0;\nconst caption = String(cfg.caption || '')\n  .split(/(\\s+)/)\n  .filter(w => {\n    if (w.charAt(0) === '#') { n += 1; return n <= 30; }\n    return true;\n  })\n  .join('')\n  .slice(0, 2200);\nreturn [{ json: { id: cfg.id, connected_account_id: cfg.connected_account_id, ig_user_id: cfg.ig_user_id, ig_username: cfg.ig_username, caption: caption, child_image_urls: urls } }];"
+      },
+      "id": "05f5e0d1-81e2-4621-a99b-2c50a13e9d7f",
+      "name": "Siapkan Data Post",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3520,
+        -208
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://connect.composio.dev/mcp",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpCustomAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Accept",
+              "value": "application/json, text/event-stream"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ jsonrpc: \"2.0\", id: 1, method: \"tools/call\", params: { name: \"COMPOSIO_MULTI_EXECUTE_TOOL\", arguments: { tools: [{ tool_slug: \"INSTAGRAM_CREATE_CAROUSEL_CONTAINER\", account: $json.connected_account_id, arguments: { ig_user_id: $json.ig_user_id, caption: $json.caption, child_image_urls: $json.child_image_urls } }], session_id: \"rear\", sync_response_to_workbench: false, thought: \"buat container carousel\" } } }) }}",
+        "options": {
+          "timeout": 120000
+        }
+      },
+      "id": "fbc2877a-10e2-42d1-9694-94a3993994cd",
+      "name": "Buat Container Carousel",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        3744,
+        -208
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const r = $input.first().json || {};\nconst cfg = $('Siapkan Data Post').first().json;\nlet id = '';\nlet err = '';\ntry {\n  const raw = typeof r.data === 'string' ? r.data : '';\n  const line = raw.split('\\n').find(l => l.startsWith('data: '));\n  if (!line) throw new Error(String(r.error ? JSON.stringify(r.error) : raw || JSON.stringify(r)));\n  const msg = JSON.parse(line.slice(6));\n  const o = JSON.parse(msg.result.content[0].text);\n  const res = (o.data && o.data.results && o.data.results[0]) || {};\n  const resp = res.response || {};\n  const d = resp.data || {};\n  id = d.id || d.creation_id || (d.data && d.data.id) || (d.response_data && (d.response_data.id || d.response_data.creation_id)) || '';\n  if (!(resp.successful === true && id)) throw new Error(String(res.error || resp.error || o.error || JSON.stringify(d)));\n} catch (e) {\n  err = String(e.message || e).replace(/[<>_*]/g, ' ').slice(0, 200);\n  id = '';\n}\nconst ok = !!id;\nreturn [{ json: { ok: ok, creation_id: String(id), id: cfg.id, ig_user_id: cfg.ig_user_id, connected_account_id: cfg.connected_account_id, ig_username: cfg.ig_username, error: err } }];"
+      },
+      "id": "22a7516e-e289-4f56-99b1-c6d36f7aa44e",
+      "name": "Cek Container",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3968,
+        -208
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.ok }}",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              },
+              "rightValue": ""
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "780b9efa-3634-4547-8a99-7c0b54dbe8a4",
+      "name": "Container OK?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        4192,
+        -208
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://connect.composio.dev/mcp",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpCustomAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Accept",
+              "value": "application/json, text/event-stream"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ jsonrpc: \"2.0\", id: 2, method: \"tools/call\", params: { name: \"COMPOSIO_MULTI_EXECUTE_TOOL\", arguments: { tools: [{ tool_slug: \"INSTAGRAM_POST_IG_USER_MEDIA_PUBLISH\", account: $json.connected_account_id, arguments: { ig_user_id: $json.ig_user_id, creation_id: $json.creation_id, max_wait_seconds: 120 } }], session_id: \"rear\", sync_response_to_workbench: false, thought: \"publish carousel\" } } }) }}",
+        "options": {
+          "timeout": 180000
+        }
+      },
+      "id": "4565844e-0cc3-41d1-815f-909f26cff7a3",
+      "name": "Publish Carousel ke Instagram",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        4400,
+        -304
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.successful }}",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              },
+              "rightValue": ""
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "229ebb06-68bc-4170-9c74-2b1c0d298147",
+      "name": "Publish Berhasil?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        4624,
+        -304
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "REPLACE_WITH_CAROUSEL_SHEET_ID"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Carousel"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "id": "={{ $(\"Cek Container\").first().json.id }}",
+            "status": "posted",
+            "instagram_post_id": "={{ String($json.data?.id ?? $json.data?.data?.id ?? \"\") }}",
+            "published_at": "={{ $now.setZone(\"Asia/Jakarta\").toFormat(\"yyyy-MM-dd HH:mm\") }}"
+          },
+          "matchingColumns": [
+            "id"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "status",
+              "displayName": "status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "instagram_post_id",
+              "displayName": "instagram_post_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "published_at",
+              "displayName": "published_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "1d3600af-063f-4bc2-965d-286bd8536ae1",
+      "name": "Tandai Posted",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        4848,
+        -400
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $(\"Pengaturan\").first().json.chat_id }}",
+        "text": "=✅ <b>Carousel berhasil diposting ke Instagram @{{ $(\"Cek Container\").first().json.ig_username }}!</b>\n\n🆔 Baris: <code>{{ $(\"Cek Container\").first().json.id }}</code>\n📌 Status di Sheet: posted",
+        "additionalFields": {
+          "appendAttribution": false,
+          "parse_mode": "HTML"
+        }
+      },
+      "id": "fe5245bf-6876-4e0b-94d6-dadd8c879fbd",
+      "name": "Notif Sukses Posting",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        5072,
+        -400
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $(\"Pengaturan\").first().json.chat_id }}",
+        "text": "=⚠️ Gagal memposting ke Instagram: {{ String(JSON.stringify($json.error || $json)).replace(/[<>_*]/g, \" \").slice(0, 200) }}\nStatus baris diubah ke failed.",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "id": "07a73f6d-6bf2-45be-ae95-3bceca723275",
+      "name": "Notif Gagal Publish",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        4848,
+        -208
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "REPLACE_WITH_CAROUSEL_SHEET_ID"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Carousel"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "id": "={{ $(\"Cek Container\").first().json.id }}",
+            "status": "failed"
+          },
+          "matchingColumns": [
+            "id"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "status",
+              "displayName": "status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "7fa18db8-fe10-4bf8-ac09-a885d341fd3f",
+      "name": "Tandai Gagal Publish",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        5072,
+        -208
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $(\"Pengaturan\").first().json.chat_id }}",
+        "text": "=⚠️ Gagal menyiapkan carousel di Instagram (baris {{ $json.id }}): {{ $json.error }}\nStatus baris diubah ke failed.",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "id": "d5e457ed-4f9b-4a6c-8f73-2d2749a4c620",
+      "name": "Notif Gagal Container",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        4400,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "REPLACE_WITH_CAROUSEL_SHEET_ID"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Carousel"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "id": "={{ $(\"Cek Container\").first().json.id }}",
+            "status": "failed"
+          },
+          "matchingColumns": [
+            "id"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "status",
+              "displayName": "status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "ea890ef4-5971-4b94-9f05-eb13885afa37",
+      "name": "Tandai Gagal Container",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        4624,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "REPLACE_WITH_CAROUSEL_SHEET_ID"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Carousel"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "id": "={{ $(\"Pengaturan\").first().json.id }}",
+            "status": "rejected"
+          },
+          "matchingColumns": [
+            "id"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "status",
+              "displayName": "status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "150bf794-e7a4-4070-8b17-ccf277c04675",
+      "name": "Tandai Ditolak",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        3520,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $(\"Pengaturan\").first().json.chat_id }}",
+        "text": "=👌 Posting dibatalkan. Baris {{ $(\"Pengaturan\").first().json.id }} ditandai rejected di Sheet.",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "id": "b35ecaba-cf2a-4d05-93e5-7ed084970c8f",
+      "name": "Notif Dibatalkan",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        3744,
+        304
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "7cf47bd5-47f9-4c64-b881-ae3661c4d472",
+      "name": "Saat Antrean Gagal",
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        608
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "REPLACE_WITH_TELEGRAM_ADMIN_CHAT_ID",
+        "text": "=⚠️ Antrean carousel gagal\nNode: {{ $json.execution.lastNodeExecuted }}\nError: {{ String($json.execution.error.message).replace(/[<>_*]/g, \" \").slice(0, 200) }}\nBaris yang sedang diproses ditandai failed.",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "id": "cc3d58bd-fa27-4d81-918a-a0f8aa572dea",
+      "name": "Notif Error Antrean",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        224,
+        608
+      ]
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "REPLACE_WITH_CAROUSEL_SHEET_ID"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Carousel"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "status",
+              "lookupValue": "generating"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "f4660aff-6a0f-417c-afbe-546259bc24ba",
+      "name": "Ambil Baris Generating",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        448,
+        608
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "REPLACE_WITH_CAROUSEL_SHEET_ID"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Carousel"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "id": "={{ $json.id }}",
+            "status": "failed"
+          },
+          "matchingColumns": [
+            "id"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "status",
+              "displayName": "status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "6bf2a57a-8a23-4b44-a907-ae08cf4bcb1e",
+      "name": "Tandai Gagal (Error)",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        672,
+        608
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Antrean Carousel Otomatis\nSetiap 5 menit: ambil 1 baris status pending di tab Carousel -> status generating -> generate gambar (Pollinations FLUX, jeda 50 detik per gambar karena batas gratis) -> ImgBB -> simpan image_urls, status image_ready -> kirim preview ke Telegram -> minta persetujuan -> bila disetujui posting ke Instagram via Composio (status posted) / bila gagal (failed) / bila ditolak atau tidak dijawab 24 jam (rejected).\n\nWatermark slide: isi kolom watermark di baris Sheet (contoh @AKUN_KEDUA). Bila kolom kosong atau tidak ada, dipakai @AKUN_UTAMA.\nHanya baris yang dibuat kurang dari 120 menit lalu yang diproses (lihat node Pilih Baris Terbaru), jadi interval jangan lebih dari 2 jam.\nAkun tujuan dan chat Telegram diatur di node Pengaturan (sekarang @AKUN_UTAMA); akun lain dipilih lewat tombol persetujuan.\nSaat ada error, baris berstatus generating ditandai failed dan notifikasi dikirim. Untuk mengulang: ubah status baris kembali ke pending.\nEksekusi sukses tidak disimpan (hasil posting tercatat di Sheet); eksekusi error tetap tersimpan.",
+        "height": 224,
+        "width": 160,
+        "color": 4
+      },
+      "id": "4c96c914-a7c3-4095-b479-7c8f0ccd827e",
+      "name": "Sticky Note 34fba86c",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -32,
+        -96
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const rows = $input.all().map(i => i.json);\nconst now = Date.now();\nlet best = null;\nlet bestT = 0;\nfor (const r of rows) {\n  const m = /^CRS-(\\d{4})(\\d{2})(\\d{2})-(\\d{2})(\\d{2})(\\d{2})$/.exec(String(r.id || ''));\n  if (!m) continue;\n  const t = Date.UTC(+m[1], +m[2] - 1, +m[3], +m[4] - 7, +m[5], +m[6]);\n  const umurMenit = (now - t) / 60000;\n  if (umurMenit < -10 || umurMenit > 120) continue;\n  if (t > bestT) { bestT = t; best = r; }\n}\nreturn best ? [{ json: best }] : [];"
+      },
+      "id": "e71977c8-0773-4228-b199-9b069f145df2",
+      "name": "Pilih Baris Terbaru",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        224,
+        32
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "REPLACE_WITH_CAROUSEL_SHEET_ID"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Carousel"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "matchingColumns": [
+            "id"
+          ],
+          "schema": [
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "id",
+              "id": "id",
+              "required": false,
+              "type": "string"
+            },
+            {
+              "canBeUsedToMatch": false,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "status",
+              "id": "status",
+              "required": false,
+              "type": "string"
+            }
+          ],
+          "value": {
+            "id": "={{ $json.id }}",
+            "status": "menunggu_persetujuan_gambar"
+          }
+        },
+        "options": {}
+      },
+      "id": "f2738474-4713-4e12-bc00-67711959e3c9",
+      "name": "Tandai Menunggu Persetujuan",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        480,
+        48
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "sendAndWait",
+        "chatId": "={{ $(\"Pengaturan\").first().json.chat_id }}",
+        "message": "=✍️ Copy carousel siap\n\n📋 Judul: {{ $(\"Pengaturan\").first().json.cover_title }}\n🆔 {{ $(\"Pengaturan\").first().json.id }}\n\nBuat gambar slide sekarang?",
+        "approvalOptions": {
+          "values": {
+            "approvalType": "double",
+            "approveLabel": "🎨 Ya, Buat Gambar",
+            "disapproveLabel": "⏭️ Lewati"
+          }
+        },
+        "chatApproval": true,
+        "approverIds": "={{ $(\"Pengaturan\").first().json.chat_id }}",
+        "options": {
+          "limitWaitTime": {
+            "values": {
+              "resumeAmount": 24
+            }
+          },
+          "appendAttribution": false
+        }
+      },
+      "id": "6ea46071-05b4-4557-8d77-31a6e8921c55",
+      "name": "Minta Persetujuan Gambar",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        752,
+        0
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 3000
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "gambar-ok",
+              "leftValue": "={{ $json.data?.approved === true }}",
+              "operator": {
+                "operation": "true",
+                "singleValue": true,
+                "type": "boolean"
+              },
+              "rightValue": ""
+            }
+          ],
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 1
+          }
+        },
+        "options": {}
+      },
+      "id": "268e29cd-1bb8-4aaf-ae13-c8e1a9c92ee0",
+      "name": "Gambar Disetujui?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        992,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "REPLACE_WITH_CAROUSEL_SHEET_ID"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Carousel"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "matchingColumns": [
+            "id"
+          ],
+          "schema": [
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "id",
+              "id": "id",
+              "required": false,
+              "type": "string"
+            },
+            {
+              "canBeUsedToMatch": false,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "status",
+              "id": "status",
+              "required": false,
+              "type": "string"
+            }
+          ],
+          "value": {
+            "id": "={{ $(\"Pengaturan\").first().json.id }}",
+            "status": "skipped"
+          }
+        },
+        "options": {}
+      },
+      "id": "b9830eb8-c54c-4f90-9a81-73a1366c3dde",
+      "name": "Tandai Dilewati",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1216,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $(\"Pengaturan\").first().json.chat_id }}",
+        "text": "=👌 Gambar tidak dibuat. Baris {{ $(\"Pengaturan\").first().json.id }} ditandai skipped di Sheet. Untuk mengulang, ubah status kembali ke pending.",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "id": "58adc7e0-4d76-48c1-b5a0-b097212f0656",
+      "name": "Notif Dilewati",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1440,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "create",
+        "backgroundColor": "={{ $json.tipe === 'isi' ? '#FFFFFF' : '#0B1F4B' }}",
+        "width": 1080,
+        "height": 1080,
+        "options": {
+          "format": "jpeg",
+          "quality": 95
+        }
+      },
+      "id": "bc40958e-f17a-4db3-8e44-b29becaa085d",
+      "name": "Buat Latar",
+      "type": "n8n-nodes-base.editImage",
+      "typeVersion": 1.1,
+      "position": [
+        1184,
+        -192
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "multiStep",
+        "operations": {
+          "operations": [
+            {
+              "operation": "draw",
+              "color": "#FF7A1A",
+              "startPositionX": 80,
+              "startPositionY": 110,
+              "endPositionX": 260,
+              "endPositionY": 124
+            },
+            {
+              "operation": "text",
+              "text": "={{ $json.no }}/{{ $json.total }}",
+              "fontSize": 36,
+              "fontColor": "#FF7A1A",
+              "positionX": 80,
+              "positionY": 40,
+              "horizontalAlignment": "west",
+              "verticalAlignment": "north",
+              "lineLength": 20
+            },
+            {
+              "operation": "text",
+              "text": "={{ $json.judul }}",
+              "fontSize": 84,
+              "fontColor": "={{ $json.tipe === 'isi' ? '#0B1F4B' : '#FFFFFF' }}",
+              "positionX": 80,
+              "positionY": 190,
+              "horizontalAlignment": "west",
+              "verticalAlignment": "north",
+              "lineLength": 18
+            },
+            {
+              "operation": "text",
+              "text": "={{ $json.isi }}",
+              "fontSize": 52,
+              "fontColor": "={{ $json.tipe === 'isi' ? '#33415C' : '#DCE6FF' }}",
+              "positionX": 80,
+              "positionY": 520,
+              "horizontalAlignment": "west",
+              "verticalAlignment": "north",
+              "lineLength": 28
+            },
+            {
+              "operation": "text",
+              "text": "={{ $('Pengaturan').first().json.watermark || '@AKUN_UTAMA' }}",
+              "fontSize": 38,
+              "fontColor": "#FF7A1A",
+              "positionX": 80,
+              "positionY": 980,
+              "horizontalAlignment": "west",
+              "verticalAlignment": "north",
+              "lineLength": 30
+            }
+          ]
+        },
+        "options": {
+          "fileName": "slide.jpg",
+          "format": "jpeg",
+          "quality": 95
+        }
+      },
+      "id": "8eff8fac-72ae-4f44-8672-aa74f0dbfb95",
+      "name": "Tulis Teks Slide",
+      "type": "n8n-nodes-base.editImage",
+      "typeVersion": 1.1,
+      "position": [
+        1328,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const r = $input.first().json || {};\nlet out = { successful: false, data: { id: '' }, error: '' };\ntry {\n  const raw = typeof r.data === 'string' ? r.data : '';\n  const line = raw.split('\\n').find(l => l.startsWith('data: '));\n  if (!line) throw new Error(String(r.error ? JSON.stringify(r.error) : raw || JSON.stringify(r)));\n  const msg = JSON.parse(line.slice(6));\n  const o = JSON.parse(msg.result.content[0].text);\n  const res = (o.data && o.data.results && o.data.results[0]) || {};\n  const resp = res.response || {};\n  const d = resp.data || {};\n  const id = d.id || (d.data && d.data.id) || (d.response_data && d.response_data.id) || '';\n  if (resp.successful !== true) throw new Error(String(res.error || resp.error || o.error || JSON.stringify(d)));\n  out = { successful: true, data: { id: String(id) }, error: '' };\n} catch (e) {\n  out.error = String(e.message || e).replace(/[<>_*]/g, ' ').slice(0, 200);\n}\nreturn [{ json: out }];"
+      },
+      "id": "3b1f7a52-6c1e-4d0b-9a57-8d1d2f4c7e10",
+      "name": "Baca Hasil Publish",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4512,
+        -304
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "sendAndWait",
+        "chatId": "={{ $(\"Pengaturan\").first().json.chat_id }}",
+        "message": "=Posting ke akun @AKUN_KEDUA?\n\n📋 Judul: {{ $(\"Pengaturan\").first().json.cover_title }}",
+        "approvalOptions": {
+          "values": {
+            "approvalType": "double",
+            "approveLabel": "📲 Ya, ke @AKUN_KEDUA",
+            "disapproveLabel": "❌ Batalkan"
+          }
+        },
+        "chatApproval": true,
+        "approverIds": "={{ $(\"Pengaturan\").first().json.chat_id }}",
+        "options": {
+          "limitWaitTime": {
+            "values": {
+              "resumeAmount": 24
+            }
+          },
+          "appendAttribution": false
+        }
+      },
+      "id": "6d0c2b1e-7a41-4f35-8c64-3a9e5b7d1f21",
+      "name": "Minta Akun Ebooks",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        3520,
+        96
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "ebooks-ok",
+              "leftValue": "={{ $json.data?.approved === true }}",
+              "operator": {
+                "operation": "true",
+                "singleValue": true,
+                "type": "boolean"
+              },
+              "rightValue": ""
+            }
+          ],
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 1
+          }
+        },
+        "options": {}
+      },
+      "id": "1c8f4a90-5b27-4e63-9d71-0a6e3c2b8d45",
+      "name": "Ebooks Disetujui?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        3744,
+        96
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "e-conn",
+              "name": "connected_account_id",
+              "type": "string",
+              "value": "REPLACE_WITH_COMPOSIO_ACCOUNT_ID"
+            },
+            {
+              "id": "e-uid",
+              "name": "ig_user_id",
+              "type": "string",
+              "value": "REPLACE_WITH_IG_USER_ID"
+            },
+            {
+              "id": "e-user",
+              "name": "ig_username",
+              "type": "string",
+              "value": "REPLACE_WITH_IG_USERNAME_2"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "id": "a47d2e83-9f10-4c5b-8e36-7b1d0f5a2c69",
+      "name": "Akun Ebooks",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        3968,
+        -64
+      ]
+    }
+  ],
+  "connections": {
+    "Tandai Generating": {
+      "main": [
+        [
+          {
+            "node": "Susun Prompt Per Slide",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Unggah ke ImgBB": {
+      "main": [
+        [
+          {
+            "node": "Kumpulkan Hasil Unggahan",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Kumpulkan Hasil Unggahan": {
+      "main": [
+        [
+          {
+            "node": "Susun Daftar URL",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Susun Daftar URL": {
+      "main": [
+        [
+          {
+            "node": "Simpan Gambar dan Status image_ready",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simpan Gambar dan Status image_ready": {
+      "main": [
+        [
+          {
+            "node": "Siapkan Preview",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Siapkan Preview": {
+      "main": [
+        [
+          {
+            "node": "Kirim Preview Foto",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Kirim Preview Foto": {
+      "main": [
+        [
+          {
+            "node": "Kumpulkan Preview",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Kumpulkan Preview": {
+      "main": [
+        [
+          {
+            "node": "Minta Persetujuan Posting",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Minta Persetujuan Posting": {
+      "main": [
+        [
+          {
+            "node": "Disetujui?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Disetujui?": {
+      "main": [
+        [
+          {
+            "node": "Siapkan Data Post",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Minta Akun Ebooks",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Siapkan Data Post": {
+      "main": [
+        [
+          {
+            "node": "Buat Container Carousel",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buat Container Carousel": {
+      "main": [
+        [
+          {
+            "node": "Cek Container",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Cek Container": {
+      "main": [
+        [
+          {
+            "node": "Container OK?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Container OK?": {
+      "main": [
+        [
+          {
+            "node": "Publish Carousel ke Instagram",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Notif Gagal Container",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Publish Berhasil?": {
+      "main": [
+        [
+          {
+            "node": "Tandai Posted",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Notif Gagal Publish",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tandai Posted": {
+      "main": [
+        [
+          {
+            "node": "Notif Sukses Posting",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Notif Gagal Publish": {
+      "main": [
+        [
+          {
+            "node": "Tandai Gagal Publish",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Notif Gagal Container": {
+      "main": [
+        [
+          {
+            "node": "Tandai Gagal Container",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tandai Ditolak": {
+      "main": [
+        [
+          {
+            "node": "Notif Dibatalkan",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Saat Antrean Gagal": {
+      "main": [
+        [
+          {
+            "node": "Notif Error Antrean",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Notif Error Antrean": {
+      "main": [
+        [
+          {
+            "node": "Ambil Baris Generating",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ambil Baris Generating": {
+      "main": [
+        [
+          {
+            "node": "Tandai Gagal (Error)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ambil Baris Pending": {
+      "main": [
+        [
+          {
+            "node": "Pilih Baris Terbaru",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Pilih Baris Terbaru": {
+      "main": [
+        [
+          {
+            "node": "Pengaturan",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Pengaturan": {
+      "main": [
+        [
+          {
+            "node": "Tandai Menunggu Persetujuan",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tandai Menunggu Persetujuan": {
+      "main": [
+        [
+          {
+            "node": "Minta Persetujuan Gambar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Minta Persetujuan Gambar": {
+      "main": [
+        [
+          {
+            "node": "Gambar Disetujui?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gambar Disetujui?": {
+      "main": [
+        [
+          {
+            "node": "Tandai Generating",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Tandai Dilewati",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tandai Dilewati": {
+      "main": [
+        [
+          {
+            "node": "Notif Dilewati",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Susun Prompt Per Slide": {
+      "main": [
+        [
+          {
+            "node": "Buat Latar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buat Latar": {
+      "main": [
+        [
+          {
+            "node": "Tulis Teks Slide",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tulis Teks Slide": {
+      "main": [
+        [
+          {
+            "node": "Unggah ke ImgBB",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Publish Carousel ke Instagram": {
+      "main": [
+        [
+          {
+            "node": "Baca Hasil Publish",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Baca Hasil Publish": {
+      "main": [
+        [
+          {
+            "node": "Publish Berhasil?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Minta Akun Ebooks": {
+      "main": [
+        [
+          {
+            "node": "Ebooks Disetujui?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ebooks Disetujui?": {
+      "main": [
+        [
+          {
+            "node": "Akun Ebooks",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Tandai Ditolak",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Akun Ebooks": {
+      "main": [
+        [
+          {
+            "node": "Siapkan Data Post",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tiap 5 Menit": {
+      "main": [
+        [
+          {
+            "node": "Ambil Baris Pending",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "active": false
+}
